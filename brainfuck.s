@@ -41,8 +41,7 @@ brainfuck:
 
 		addq $1, %rdi
 
-		
-		/*movq %r14, %rsp*/
+		movq %r14, %rsp
 		/*subq $16, %rsp*/
 		/*pushq %rdi*/
 		/*pushq %rax*/
@@ -119,7 +118,7 @@ brainfuck:
 
 			loop_inject:
 				cmpq $0, (%r13) 	# compare 0 to value currently pointed at
-				/*je feed_skip*/
+				je feed_skip
 
 				subq $8, %r12
 				movq %rdi, (%r12)
@@ -147,8 +146,8 @@ brainfuck:
 
 				movq %rdi, %r15
 				movq $54, %rsi
-				/*movq (%r13), %rsi*/
-				movq $digit, %rdi
+				movq (%r13), %rsi
+				movq $char, %rdi
 				movq $0, %rax
 				call printf
 
