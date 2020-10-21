@@ -18,41 +18,25 @@ brainfuck:
 	# r13 holds values pointer (vp) - tape
 	# r12 holds andresses pointer (ap)
 
-	movq %rbp, %r12
-	movq %rbp, %r13
-	subq $80000, %r13 # space for recursion
+	movq %rbp, %r12 # holds value pointer
 
+	movq %rbp, %r13
+	subq $8000, %r13 # space for holding nested loops
 	movq %r13, %r14 # holds max tape value
-	/*movq %r13, %rbx # holds min tape value*/
 
 	movq $0, %rbx	# holds skip values
 
-	/*movq -16(%r13), %rsi*/
-
-	/*movq $digit, %rdi*/
-	/*movq $0, %rax*/
-	/*call printf*/
-
 	jmp new_tape # reset first block in the stack value
+
 	next_code_block:
+		movq %r14, %rsp
+		# write after the max value so we dont mess up the code
+
 		call get
 		cmpq $0, %rax
 		je end_of_code
 
 		addq $1, %rdi
-
-		movq %r14, %rsp
-		/*subq $16, %rsp*/
-		/*pushq %rdi*/
-		/*pushq %rax*/
-
-		/*movq $charn, %rdi*/
-		/*movq %rax, %rsi*/
-		/*movq $0, %rax*/
-		/*call printf*/
-
-		/*popq %rax*/
-		/*popq %rdi*/
 
 		cmpq $0, %rbx
 		jg skip_code_block
@@ -72,7 +56,6 @@ brainfuck:
 			je loop_eject
 			cmpq $46, %rax # .
 			je write_val
-
 			cmpq $44, %rax # ,
 			je ask_val
 
@@ -81,18 +64,7 @@ brainfuck:
 			
 			min_vp:
 				addq $8, %r13
-				/*cmpq %r13, %rbx*/
-				/*jl new_prev_tape*/
-
 				jmp next_code_block
-				new_prev_tape:
-					/*movq $0, (%r13) # reset tape value, as its a new andress*/
-					movq %r13, %rsp
-					popq %r15
-					push $0
-					/*movq %r13, %rbx*/
-					jmp next_code_block
-				
 
 			plus_vp:
 				subq $8, %r13
@@ -101,10 +73,7 @@ brainfuck:
 
 				jmp next_code_block
 				new_tape:
-					/*movq $0, (%r13) # reset tape value, as its a new andress*/
-					movq %r13, %rsp
-					popq %r15
-					push $0
+					movq $0, (%r13) # reset tape value, as its a new andress
 					movq %r13, %r14
 					jmp next_code_block
 				
@@ -122,30 +91,21 @@ brainfuck:
 
 				subq $8, %r12
 				movq %rdi, (%r12)
-				/*movq %rsp, %r12*/
 				jmp next_code_block
 						
-					
-
 			loop_eject:
 				cmpq $0, (%r13) 	# compare 0 to value currently pointed at
 				je eject
 
 				movq (%r12), %rdi 	# jmp to code block last pushed on andr. stack 	
-				/*decq %rdi*/
-				/*movq $0, %rdi*/
 				jmp next_code_block
 
 				eject:
-					/*addq $8, %r12 	# essentially pop last andress*/
-					movq %r12, %rsp
-					popq %r15
-					movq %rsp, %r12
+					addq $8, %r12 	# essentially pop last andress
 					jmp next_code_block
 			write_val:
 
 				movq %rdi, %r15
-				movq $54, %rsi
 				movq (%r13), %rsi
 				movq $char, %rdi
 				movq $0, %rax
@@ -153,6 +113,7 @@ brainfuck:
 
 				movq %r15, %rdi
 				jmp next_code_block
+
 			ask_val:
 				movq %rdi, %r15
 				movq $0, %rax
