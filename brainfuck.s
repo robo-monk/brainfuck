@@ -1,15 +1,8 @@
-.include "write.s"
 .global brainfuck
 
-format_str: .asciz "We should be executing the following code:\n%s"
-digit: .asciz "%d "
 char: .asciz "%c"
-charn: .asciz "%c "
-string: .asciz "%s"
 
-
-# Your brainfuck subroutine will receive one argument:
-# a zero termianted string containing the code to execute.
+# lets
 brainfuck:
 	pushq %rbp
 	movq %rsp, %rbp
@@ -32,31 +25,39 @@ brainfuck:
 		movq %r14, %rsp
 		# write after the max value so we dont mess up the code
 
-		call get
-		cmpq $0, %rax
-		je end_of_code
+		/* 56(%rdi) is the code block */
 
-		addq $1, %rdi
+		cmpb $0, 56(%rdi)
+		je end_of_code	# if code block zero, end
+
+		addq $1, %rdi 	# add 1 to code block counter
 
 		cmpq $0, %rbx
 		jg skip_code_block
 		
 		do_code_block:
-			cmpq $60, %rax # <
-			je min_vp
-			cmpq $62, %rax # >
+			cmpb $62, 56(%rdi) # >
 			je plus_vp
-			cmpq $43, %rax # +
+
+			cmpb $60, 56(%rdi) # <
+			je min_vp
+
+			cmpb $43, 56(%rdi) # +
 			je plus_val
-			cmpq $45, %rax # -
+
+			cmpb $45, 56(%rdi) # -
 			je minus_val
-			cmpq $91, %rax
-			je loop_inject
-			cmpq $93, %rax 
-			je loop_eject
-			cmpq $46, %rax # .
+
+			cmpb $46, 56(%rdi) # .
 			je write_val
-			cmpq $44, %rax # ,
+
+			cmpb $91, 56(%rdi)
+			je loop_inject
+
+			cmpb $93, 56(%rdi) 
+			je loop_eject
+
+			cmpb $44, 56(%rdi) # ,
 			je ask_val
 
 			/*if none of the above*/
@@ -106,6 +107,7 @@ brainfuck:
 			write_val:
 
 				movq %rdi, %r15
+
 				movq (%r13), %rsi
 				movq $char, %rdi
 				movq $0, %rax
@@ -126,11 +128,12 @@ brainfuck:
 			jmp next_code_block	
 
 		skip_code_block:
-			cmpq $91, %rax
+			cmpb $91, 56(%rdi)
 			je feed_skip
 
-			cmpq $93, %rax 
+			cmpb $93, 56(%rdi) 
 			je eat_skip
+
 			jmp next_code_block	
 
 			feed_skip:
