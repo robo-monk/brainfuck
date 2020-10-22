@@ -14,9 +14,9 @@ brainfuck:
 	movq %rbp, %r12 # holds value pointer
 
 	movq %rbp, %r13
-	subq $8000, %r13 # space for holding nested loops
+	subq $4000, %r13 # space for holding nested loops
 
-	movq $42069, %r15 # tape length
+	movq $1000, %r15 # tape length
 	movq %r13, %r14 
 	init_tape:
 		movq $0, (%r14) # reset tape value, as its a new andress
@@ -26,7 +26,6 @@ brainfuck:
 		jne init_tape
 
 	movq $0, %rbx	# holds skip values
-
 
 	next_code_block:
 		movq %r14, %rsp
@@ -40,12 +39,16 @@ brainfuck:
 		
 		do_code_block:
 			movb (%rdi), %r15b
-
-			cmpb $62, %r15b	# >
-			je plus_vp
+			
+			skip_code_load:
+			skip_60:
 
 			cmpb $60, %r15b # <
 			je min_vp
+			
+
+			cmpb $62, %r15b	# >
+			je plus_vp
 
 			cmpb $43, %r15b # +
 			je plus_val
@@ -73,8 +76,9 @@ brainfuck:
 			jmp next_code_block
 			
 			min_vp:
-				addq $8, %r13
-				jmp next_code_block
+			        # comment below to activate turbo	
+				/*addq $8, %r13*/
+				/*jmp next_code_block*/
 
 				movq $0,  %r15
 				do_min_vp:
@@ -83,23 +87,40 @@ brainfuck:
 					incq %rdi
 					cmpb $60, (%rdi)
 					je recur_min_vp
-					decq %rdi
-
+					/*decq %rdi*/
 					addq %r15, %r13
-					jmp next_code_block
+
+					/*movb (%rdi), %r15b*/
+					jmp do_code_block
 				recur_min_vp:
 					jmp do_min_vp
 
 
 
 			plus_vp:
-				subq $8, %r13
-				jmp next_code_block
-				
-				
+			        # comment below to activate turbo	
+				/*subq $8, %r13*/
+				/*jmp next_code_block*/
+				movq $0,  %r15
+				do_plus_vp:
+					addq $8, %r15
+
+					incq %rdi
+					cmpb $62, (%rdi)
+					je recur_plus_vp
+					/*decq %rdi*/
+
+					subq %r15, %r13
+					jmp do_code_block
+
+				recur_plus_vp:
+					jmp do_plus_vp
+
 			plus_val:
-				incq (%r13)
-				jmp next_code_block
+				# comment below to activate turbo
+				/*incq (%r13)*/
+				/*jmp next_code_block*/
+
 				movq $0,  %r15
 				do_plus_val:
 					incq %r15
@@ -107,16 +128,17 @@ brainfuck:
 					incq %rdi
 					cmpb $43, (%rdi)
 					je recur_plus_val
-					decq %rdi
-
+					/*decq %rdi*/
 					addq %r15, (%r13)
-					jmp next_code_block
+					jmp do_code_block
 				recur_plus_val:
 					jmp do_plus_val
 
 			minus_val:
-				decq (%r13)
-				jmp next_code_block
+				# comment below to activate turbo
+				/*decq (%r13)*/
+				/*jmp next_code_block*/
+
 				movq $0,  %r15
 				do_minus_val:
 					incq %r15
@@ -124,10 +146,9 @@ brainfuck:
 					incq %rdi
 					cmpb $41, (%rdi)
 					je recur_minus_val
-					decq %rdi
 
 					subq %r15, (%r13)
-					jmp next_code_block
+					jmp do_code_block
 				recur_minus_val:
 					jmp do_minus_val
 
