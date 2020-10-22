@@ -28,6 +28,19 @@ if sys.argv[1] == "loop":
         print("Results so far:")
         print(str(analyze_tests(tests)))
         time.sleep(9)
+
+elif sys.argv[1]:
+    tests = []
+    n = 0
+    for _ in range(int(sys.argv[1])):
+        n += 1
+        tests.append(test())
+        print("Finished running test #" + str(n))
+        print("Results so far:")
+        print(str(analyze_tests(tests)))
+        # time.sleep(9)
+
+
 else:
     print("Done in :" +  str(test()))
 

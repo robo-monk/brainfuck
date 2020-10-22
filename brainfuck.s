@@ -1,201 +1,159 @@
+#Lab bonus assignment 6
+#27/10/2019
+#
+#Proudly written by:
+#Panagiotis Papadopoulos (student number 5054443)
+#Amir van Delft (student number 5020794)
+
+.data
+ArrayOfCells: .skip 50000	#Allocate space for the cells  
+
+.text
+input1: .asciz "%c"	#the inputs are just characters 
+newline: .asciz "\n"	#print a new line after the result is being print
+
 .global brainfuck
 
-char: .asciz "%c"
+format_str: .asciz "We should be executing the following code:\n%s"
 
+# Your brainfuck subroutine will receive one argument:
+# a zero termianted string containing the code to execute.
 brainfuck:
-	pushq %rbp
+	pushq %rbp	#initialize the base pointer
+	movq %rsp, %rbp	#move the stack pointer where the base pointer is
+
+	movq $0, %r15	#That's the counter for the nested loops   
+	movq %rdi, %r14	#put the string with the commands in r14 in order to compute.
+	decq %r14	#decrement the instructions pointer because we increment it in the loop wholeProgram (r14 basically is the string and (%r14) is the char of the array of chars where the pointer is)
+	movq $0, %r13	#put the cell pointer to point to the first cell
+	movq $1, %r12	#boolean variable that checks whether this is the first "["    ~assuming by default that yes it is
+
+	movq %rdi, %rsi	#prints the message in format_str
+	movq $format_str, %rdi
+	call printf
+	movq $0, %rax
+
+
+wholeProgram:
+	incq %r14 #move the pointer to the next char-command in the string	
+
+	cmpb $62, (%r14) #1stCase is the command ">"
+	je firstCase	#jump to the corresponding label
+	cmpb $60, (%r14) #2ndCase is the command "<"
+	je secondCase	#jump to the corresponding label
+	cmpb $43, (%r14) #3rdCase is the command "+"
+	je thirdCase	#jump to the corresponding label
+	cmpb $45, (%r14) #4thCase is the command "-"
+	je fourthCase	#jump to the corresponding label
+	cmpb $46, (%r14) #5thCase is the command "."
+	je fifthCase	#jump to the corresponding label
+	cmpb $44, (%r14) #6thCase is the command ","
+	je sixthCase	#jump to the corresponding label
+	cmpb $91, (%r14) #7thCase is the command "["
+	je seventhCase	#jump to the corresponding label
+	cmpb $93, (%r14) #8thCase is the command "]"
+	je eighthCase	#jump to the corresponding label
+	
+	cmpb $0, (%r14)	#if the command is a 0 that means the program has ended 
+	je endOfBF	#jump to the end of this subroutine
+
+	jmp wholeProgram	#if none of the above was satisfied, jump to the start of the loop (so basically move to the next command)
+
+firstCase: 
+	incq %r13	#increment the cell pointer
+	jmp wholeProgram	#go to the next instruction
+
+secondCase:
+	decq %r13	#increment the cell pointer
+	jmp wholeProgram	#go to the next instruction
+
+thirdCase:
+	
+	incq ArrayOfCells(%r13)	#increment the value in the cell where the cell pointer points	
+	jmp wholeProgram	#go to the next instruction
+	
+fourthCase:
+	decq ArrayOfCells(%r13)	#decrement the value in the cell where the cell pointer points
+	jmp wholeProgram	#go to the next instruction
+
+fifthCase:
+	movq $input1, %rdi	#move the type of the output in rdi	
+	movq ArrayOfCells(%r13), %rsi	#move the result from r13 to rsi in order to print
+	movq $0, %rax			#no vector arguments
+	call printf
+	jmp wholeProgram	#go to the next instruction
+
+sixthCase:
+	pushq %rbp	#initialize a new stack frame to put the value the user entered
 	movq %rsp, %rbp
+	
+	subq $8, %rsp		#allocate 8 bytes to the stack frame
+	leaq -8(%rbp), %rsi	#make rsi point 8 bytes above the base pointer
+	movq $input1, %rdi	#copy the character to rdi
+	movq $0, %rax		#no vector arguments
+	call scanf
+	movq -8(%rbp), %r12	#take the entered value and put it to r12
+	movq %r12, ArrayOfCells(%r13)	#copy the character that the user entered to the cell at the pointer
+	
+	movq %rbp, %rsp	#deinitialize a new stack frame
+	popq %rbp
 
-	# rdi holds code pointer (cp)
-	# r13 holds values pointer (vp) - tape
-	# r12 holds andresses pointer (ap)
+	jmp wholeProgram	#go to the next instruction
 
-	movq %rbp, %r12 # holds value pointer
+seventhCase: 
+	cmpb $0, ArrayOfCells(%r13)	#if the value of the cell just before the loop (r13) is NOT 0, that means the loop has NOT ended yet, so we need to continue doing the instructions between [ ]
+	je elseBranch1	
 
-	movq %rbp, %r13
-	subq $4000, %r13 # space for holding nested loops in bits
+#so this is the if branch
+	pushq %r14	#push the address of that "["	
+	incq %r15	#increment the loop counter
+	jmp wholeProgram
 
-	movq $1000, %r15 # tape length in bytes
-	movq %r13, %r14 
+elseBranch1:	#if the cell is 0
+	movq %r15, %r11	#putting the counter in r11 in order to implement the while
+	incq %r11	#decrement r11 (the counter) because we want to end up with r11 == r15
 
-	init_tape:
-		movq $0, (%r14) # reset tape value, as its a new andress
-		subq $8, %r14
-		decq %r15
-		cmpq $0, %r15
-		jne init_tape
+whileNotReachedMatchingEnd:
+	cmpq %r11, %r15	#while the counters are not equal, continue looking for the next "]"
+	je wholeProgram		
+	
+	incq %r14	#move to the next command
+	
+	cmpb $91, (%r14)	#if the command is [ we are going "deeper" in nested loops so we increment r11
+	je foundOpenBracket
+	
+	cmpb $93, (%r14)	#if the command is ] we are going "upper" in nested loops so we decrement r11
+	je foundCloseBracket
 
-	movq $0, %rbx	# holds skip values
+	jmp whileNotReachedMatchingEnd	
+	
+foundOpenBracket:
+	incq %r11
+	jmp whileNotReachedMatchingEnd
 
-	next_code_block:
-		movq %r14, %rsp # write after the tape so we dont mess up the values
-		
-		/* (%rdi) is the code block */
-		incq %rdi 	# add 1 to code block counter
+foundCloseBracket:
+	decq %r11
+	jmp whileNotReachedMatchingEnd
+ 
+	
+eighthCase:
+	cmpb $0, ArrayOfCells(%r13)	#if the value of the cell just before the loop (r13) is 0, that means that the loop has ended so we want to continue with the next instruction
+	jne elseBranch2
+	
+	popq %r10			#just throwing away the [ because we don't need it anymore
+	decq %r15			#decrement the loop counter
+	movq $1, %r12			#next loop we want to first execute the firstOpenBracket instructions
+	jmp wholeProgram	
 
-		cmpq $0, %rbx
-		jg skip_code_block
-		
-		do_code_block:
-			movb (%rdi), %r15b
-			
-			cmpb $60, %r15b # <
-			je min_vp
-			cmpb $62, %r15b	# >
-			je plus_vp
-			cmpb $43, %r15b # +
-			je plus_val
-			cmpb $45, %r15b # -
-			je minus_val
-			cmpb $46, %r15b # .
-			je write_val
-			cmpb $91, %r15b
-			je loop_inject
-			cmpb $93, %r15b 
-			je loop_eject
-			cmpb $44, %r15b # ,
-			je ask_val
+elseBranch2:	#if the value of the cell just before the loop (r13) is NOT 0, that means that the loop has not ended yet so we want to the next instruction after the corresponding "["
+	movq (%rsp), %r14	#fetch the address of the corresponding "[" and move the instruction pointer there
+	jmp wholeProgram	
 
-			cmpb $0, %r15b
-			je end_of_code	# if code block zero, end
+endOfBF:
+	movq $newline, %rdi		#copy the string "newline" to rdi
+	movq $0, %rax			#no vector arguments
+	call printf	 
 
-			/*if none of the above*/
-			jmp next_code_block
-			min_vp:
-			        # comment below to activate turbo	
-				/*addq $8, %r13*/
-				/*jmp next_code_block*/
-
-				movq $0,  %r15
-				do_min_vp:
-					addq $8, %r15
-
-					incq %rdi
-					cmpb $60, (%rdi)
-					je recur_min_vp
-					addq %r15, %r13
-
-					jmp do_code_block
-				recur_min_vp:
-					jmp do_min_vp
-
-
-
-			plus_vp:
-			        # comment below to activate turbo	
-				/*subq $8, %r13*/
-				/*jmp next_code_block*/
-
-				movq $0,  %r15
-				do_plus_vp:
-					addq $8, %r15
-
-					incq %rdi
-					cmpb $62, (%rdi)
-					je recur_plus_vp
-
-					subq %r15, %r13
-					jmp do_code_block
-
-				recur_plus_vp:
-					jmp do_plus_vp
-
-			plus_val:
-				# comment below to activate turbo
-				/*incq (%r13)*/
-				/*jmp next_code_block*/
-
-				movq $0,  %r15
-				do_plus_val:
-					incq %r15
-
-					incq %rdi
-					cmpb $43, (%rdi)
-					je recur_plus_val
-
-					addq %r15, (%r13)
-					jmp do_code_block
-				recur_plus_val:
-					jmp do_plus_val
-
-			minus_val:
-				# comment below to activate turbo
-				/*decq (%r13)*/
-				/*jmp next_code_block*/
-
-				movq $0,  %r15
-				do_minus_val:
-					incq %r15
-
-					incq %rdi
-					cmpb $41, (%rdi)
-					je recur_minus_val
-
-					subq %r15, (%r13)
-					jmp do_code_block
-				recur_minus_val:
-					jmp do_minus_val
-
-
-			loop_inject:
-				cmpq $0, (%r13) 	# compare 0 to value currently pointed at
-				je feed_skip
-
-				subq $8, %r12
-				movq %rdi, (%r12)
-				jmp next_code_block
-						
-			loop_eject:
-				cmpq $0, (%r13) 	# compare 0 to value currently pointed at
-				je eject
-
-				movq (%r12), %rdi 	# jmp to code block last pushed on andr. stack 	
-				jmp next_code_block
-
-				eject:
-					addq $8, %r12 	# essentially pop last andress
-					jmp next_code_block
-			write_val:
-
-				movq %rdi, %r15
-
-				movq (%r13), %rsi
-				movq $char, %rdi
-				movq $0, %rax
-				call printf
-
-				movq %r15, %rdi
-				jmp next_code_block
-
-			ask_val:
-				movq %rdi, %r15
-				movq $0, %rax
-				movq $char, %rdi
-				leaq (%r13), %rsi
-				call scanf
-				movq %r15, %rdi
-
-
-			jmp next_code_block	
-
-		skip_code_block:
-			cmpb $91, (%rdi)
-			je feed_skip
-
-			cmpb $93, (%rdi) 
-			je eat_skip
-
-			jmp next_code_block	
-
-			feed_skip:
-				incq %rbx
-				jmp next_code_block
-			eat_skip:
-				decq %rbx
-				jmp next_code_block
-
-	end_of_code:
-			
-	movq %rbp, %rsp
+	movq %rbp, %rsp	#deinitialize the stack frame
 	popq %rbp
 	ret
