@@ -39,20 +39,25 @@ brainfuck:
 		do_code_block:
 			movb (%rdi), %r15b
 			
-			cmpb $60, %r15b # <
-			je min_vp
-			cmpb $62, %r15b	# >
-			je plus_vp
 			cmpb $43, %r15b # +
 			je plus_val
 			cmpb $45, %r15b # -
 			je minus_val
-			cmpb $46, %r15b # .
-			je write_val
+			
+			cmpb $60, %r15b # <
+			je min_vp
+			cmpb $62, %r15b	# >
+			je plus_vp
+			
 			cmpb $91, %r15b
 			je loop_inject
+
 			cmpb $93, %r15b 
 			je loop_eject
+
+			cmpb $46, %r15b # .
+			je write_val
+			
 			cmpb $44, %r15b # ,
 			je ask_val
 
