@@ -77,8 +77,6 @@ brainfuck:
 
 				jmp do_code_block
 
-
-
 			plus_vp:
 			        # comment below to activate turbo	
 				/*subq $8, %r13*/
@@ -91,7 +89,6 @@ brainfuck:
 				je plus_vp
 
 				jmp do_code_block
-
 
 			plus_val:
 				# comment below to activate turbo
@@ -134,15 +131,19 @@ brainfuck:
 				movq %rdi, (%r12)	# push current code location
 				
 				incq %rdi
+
+				# comment below to disable [-] boost
 				cmpb $'-', (%rdi)
 				je try_sink_value
 
 				jmp do_code_block
-
+				
 				try_sink_value: # optimizes for [-] sequences which set current value to zero
 					incq %rdi
 					cmpb $']', (%rdi)
 					je sink_value
+
+					// if not go back to the - and execute it
 					decq %rdi
 					jmp minus_val
 				sink_value:
@@ -184,22 +185,22 @@ brainfuck:
 
 		skip_next_code_block:
 			incq %rdi
-		skip_code_block:
-			cmpb $91, (%rdi)
-			je feed_skip
+			skip_code_block:
+				cmpb $91, (%rdi)
+				je feed_skip
 
-			cmpb $93, (%rdi) 
-			je eat_skip
+				cmpb $93, (%rdi) 
+				je eat_skip
 
-			jmp skip_next_code_block
-
-			feed_skip:
-				incq %rbx
 				jmp skip_next_code_block
 
-			eat_skip:
-				decq %rbx
-				jmp next_code_block
+				feed_skip:
+					incq %rbx
+					jmp skip_next_code_block
+
+				eat_skip:
+					decq %rbx
+					jmp next_code_block
 
 	end_of_code:
 			
