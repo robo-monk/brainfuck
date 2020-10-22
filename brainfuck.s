@@ -41,7 +41,6 @@ brainfuck:
 			
 			cmpb $43, %r15b # +
 			je plus_val
-
 			cmpb $45, %r15b # -
 			je minus_val
 			
@@ -50,15 +49,13 @@ brainfuck:
 			cmpb $62, %r15b	# >
 			je plus_vp
 			
-			cmpb $91, %r15b
+			cmpb $91, %r15b # [
 			je loop_inject
-
-			cmpb $93, %r15b 
+			cmpb $93, %r15b  # ]
 			je loop_eject
 
 			cmpb $46, %r15b # .
 			je write_val
-			
 			cmpb $44, %r15b # ,
 			je ask_val
 
@@ -134,8 +131,23 @@ brainfuck:
 				je feed_skip
 
 				subq $8, %r12
-				movq %rdi, (%r12)
-				jmp next_code_block
+				movq %rdi, (%r12)	# push current code location
+				
+				incq %rdi
+				cmpb $'-', (%rdi)
+				je try_sink_value
+
+				jmp do_code_block
+
+				try_sink_value: # optimizes for [-] sequences which set current value to zero
+					incq %rdi
+					cmpb $']', (%rdi)
+					je sink_value
+					decq %rdi
+					jmp minus_val
+				sink_value:
+					movq $0, (%r13)
+					jmp do_code_block
 						
 			loop_eject:
 				cmpq $0, (%r13) 	# compare 0 to value currently pointed at
@@ -153,7 +165,7 @@ brainfuck:
 
 				movq (%r13), %rsi
 				movq $char, %rdi
-				movq $0, %rax
+				xorq %rax, %rax
 				call printf
 
 				movq %r15, %rdi
@@ -187,10 +199,6 @@ brainfuck:
 
 			eat_skip:
 				decq %rbx
-				
-				/*cmpq $0, %rbx*/
-				/*jg skip_next_code_block*/
-
 				jmp next_code_block
 
 	end_of_code:
