@@ -41,6 +41,7 @@ brainfuck:
 			
 			cmpb $43, %r15b # +
 			je plus_val
+
 			cmpb $45, %r15b # -
 			je minus_val
 			
