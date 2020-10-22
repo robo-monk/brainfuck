@@ -31,11 +31,9 @@ brainfuck:
 		movq %r14, %rsp # write after the tape so we dont mess up the values
 		
 		/* (%rdi) is the code block */
-		incq %rdi 	# add 1 to code block counter
+		addq $1, %rdi 	# add 1 to code block counter
 
-		cmpq $0, %rbx
-		jg skip_code_block
-		
+				
 		do_code_block:
 			movb (%rdi), %r15b
 			
@@ -192,6 +190,9 @@ brainfuck:
 				jmp next_code_block
 			eat_skip:
 				decq %rbx
+cmpq $0, %rbx
+		jg skip_code_block
+
 				jmp next_code_block
 
 	end_of_code:
