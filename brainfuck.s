@@ -15,50 +15,59 @@ brainfuck:
 
 	movq %rbp, %r13
 	subq $8000, %r13 # space for holding nested loops
-	movq %r13, %r14 # holds max tape value
+
+	movq $42069, %r15 # tape length
+	movq %r13, %r14 
+	init_tape:
+		movq $0, (%r14) # reset tape value, as its a new andress
+		subq $8, %r14
+		decq %r15
+		cmpq $0, %r15
+		jne init_tape
 
 	movq $0, %rbx	# holds skip values
 
-	jmp new_tape # reset first block in the stack value
 
 	next_code_block:
 		movq %r14, %rsp
 		# write after the max value so we dont mess up the code
 
-		/* 56(%rdi) is the code block */
-
-		cmpb $0, 56(%rdi)
-		je end_of_code	# if code block zero, end
-
+		/* (%rdi) is the code block */
 		addq $1, %rdi 	# add 1 to code block counter
 
 		cmpq $0, %rbx
 		jg skip_code_block
 		
 		do_code_block:
-			cmpb $62, 56(%rdi) # >
+			movb (%rdi), %r15b
+
+			cmpb $62, %r15b	# >
 			je plus_vp
 
-			cmpb $60, 56(%rdi) # <
+			cmpb $60, %r15b # <
 			je min_vp
 
-			cmpb $43, 56(%rdi) # +
+			cmpb $43, %r15b # +
 			je plus_val
 
-			cmpb $45, 56(%rdi) # -
+			cmpb $45, %r15b # -
 			je minus_val
 
-			cmpb $46, 56(%rdi) # .
+			cmpb $46, %r15b # .
 			je write_val
 
-			cmpb $91, 56(%rdi)
+			cmpb $91, %r15b
 			je loop_inject
 
-			cmpb $93, 56(%rdi) 
+			cmpb $93, %r15b 
 			je loop_eject
 
-			cmpb $44, 56(%rdi) # ,
+			cmpb $44, %r15b # ,
 			je ask_val
+
+			cmpb $0, %r15b
+			je end_of_code	# if code block zero, end
+
 
 			/*if none of the above*/
 			jmp next_code_block
@@ -67,24 +76,61 @@ brainfuck:
 				addq $8, %r13
 				jmp next_code_block
 
+				movq $0,  %r15
+				do_min_vp:
+					addq $8, %r15
+
+					incq %rdi
+					cmpb $60, (%rdi)
+					je recur_min_vp
+					decq %rdi
+
+					addq %r15, %r13
+					jmp next_code_block
+				recur_min_vp:
+					jmp do_min_vp
+
+
+
 			plus_vp:
 				subq $8, %r13
-				cmpq %r13, %r14
-				jg new_tape
-
 				jmp next_code_block
-				new_tape:
-					movq $0, (%r13) # reset tape value, as its a new andress
-					movq %r13, %r14
-					jmp next_code_block
+				
 				
 			plus_val:
 				incq (%r13)
 				jmp next_code_block
+				movq $0,  %r15
+				do_plus_val:
+					incq %r15
+
+					incq %rdi
+					cmpb $43, (%rdi)
+					je recur_plus_val
+					decq %rdi
+
+					addq %r15, (%r13)
+					jmp next_code_block
+				recur_plus_val:
+					jmp do_plus_val
 
 			minus_val:
 				decq (%r13)
 				jmp next_code_block
+				movq $0,  %r15
+				do_minus_val:
+					incq %r15
+
+					incq %rdi
+					cmpb $41, (%rdi)
+					je recur_minus_val
+					decq %rdi
+
+					subq %r15, (%r13)
+					jmp next_code_block
+				recur_minus_val:
+					jmp do_minus_val
+
 
 			loop_inject:
 				cmpq $0, (%r13) 	# compare 0 to value currently pointed at
@@ -128,10 +174,10 @@ brainfuck:
 			jmp next_code_block	
 
 		skip_code_block:
-			cmpb $91, 56(%rdi)
+			cmpb $91, (%rdi)
 			je feed_skip
 
-			cmpb $93, 56(%rdi) 
+			cmpb $93, (%rdi) 
 			je eat_skip
 
 			jmp next_code_block	
