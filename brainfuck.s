@@ -6,11 +6,17 @@ brainfuck:
 	pushq %rbp
 	movq %rsp, %rbp
 
-	# rdi holds code pointer (cp)
-	# r13 holds values pointer (vp) - tape
-	# r12 holds andresses pointer (ap)
-
-	movq %rbp, %r12 # holds value pointer
+/*
+ *
+ *                     STACK LAYOUT SETUP
+ *
+ *    	   rbp				         r14
+ *          | <-- andresses ---> | <--- tape ---> |
+ *        	   .5kb      	       1kb
+ *                 r12      	       r13
+ *
+ */
+	movq %rbp, %r12 # holds andresses pointer
 
 	movq %rbp, %r13
 	subq $4000, %r13 # space for holding nested loops in bits
@@ -27,14 +33,15 @@ brainfuck:
 
 	movq $0, %rbx	# holds skip values
 
-	next_code_block:
-		movq %r14, %rsp # write after the tape so we dont mess up the values
-		
-		/* (%rdi) is the code block */
-		incq %rdi 	# add 1 to code block counter
 
-		cmpq $0, %rbx
-		jg skip_code_block
+
+	next_code_block:
+		movq %r14, %rsp 	# write after the tape so we dont mess up the values
+		
+		incq %rdi 		# incq code pointer
+
+		cmpq $0, %rbx		# rbx holds skip value
+		jg skip_code_block	# if positive, skip this code block
 		
 		do_code_block:
 			movb (%rdi), %r15b
@@ -61,31 +68,32 @@ brainfuck:
 
 			cmpb $0, %r15b
 			je end_of_code	# if code block zero, end
-
-			/*if none of the above*/
+ 
+			/* if none of the above */
 			jmp next_code_block
+
 			min_vp:
 			        # comment below to activate turbo	
 				/*addq $8, %r13*/
 				/*jmp next_code_block*/
 
-				addq $8, %r13
+				addq $8, %r13		# point to previous location in tape
 				incq %rdi
 
-				cmpb $60, (%rdi)
+				cmpb $60, (%rdi) 	# probably next one will be <
 				je min_vp
 
-				jmp do_code_block
+				jmp do_code_block 	# bad luck
 
 			plus_vp:
 			        # comment below to activate turbo	
 				/*subq $8, %r13*/
 				/*jmp next_code_block*/
 
-				subq $8, %r13
+				subq $8, %r13		# point to next location in tape
 				incq %rdi
 
-				cmpb $62, (%rdi)
+				cmpb $62, (%rdi)	# turbocharge
 				je plus_vp
 
 				jmp do_code_block
@@ -95,15 +103,15 @@ brainfuck:
 				/*incq (%r13)*/
 				/*jmp next_code_block*/
 
-				xorq %r8, %r8
+				xorq %r8, %r8			# reset r8
 				do_plus_val:
-					incq %r8
+					incq %r8		# r8 serves as an accumulator	
 
 					incq %rdi
 					cmpb $43, (%rdi)
-					je do_plus_val
+					je do_plus_val		# redo if next is +
 
-					addq %r8, (%r13)
+					addq %r8, (%r13)	# if not add the accumulator to the tape
 					jmp do_code_block
 
 			minus_val:
@@ -116,7 +124,7 @@ brainfuck:
 					incq %r8
 
 					incq %rdi
-					cmpb $41, (%rdi)
+					cmpb $45, (%rdi)
 					je do_minus_val
 
 					subq %r8, (%r13)
@@ -128,22 +136,22 @@ brainfuck:
 				je feed_skip
 
 				subq $8, %r12
-				movq %rdi, (%r12)	# push current code location
+				movq %rdi, (%r12)	# push current code location to the andresses stack
 				
-				incq %rdi
+				incq %rdi	
 
 				# comment below to disable [-] boost
-				cmpb $'-', (%rdi)
+				cmpb $45, (%rdi)
 				je try_sink_value
 
 				jmp do_code_block
 				
-				try_sink_value: # optimizes for [-] sequences which set current value to zero
+				try_sink_value: # optimizes for [-] sequences which set current tape value to zero
 					incq %rdi
-					cmpb $']', (%rdi)
+					cmpb $93, (%rdi)
 					je sink_value
 
-					// if not go back to the - and execute it
+					// if not go back to the '-' and execute it
 					decq %rdi
 					jmp minus_val
 				sink_value:
@@ -180,10 +188,11 @@ brainfuck:
 				call scanf
 				movq %r15, %rdi
 
-
 			jmp next_code_block	
 
 		skip_next_code_block:
+			# rbx holds the skip value
+
 			incq %rdi
 			skip_code_block:
 				cmpb $91, (%rdi)
@@ -195,7 +204,7 @@ brainfuck:
 				jmp skip_next_code_block
 
 				feed_skip:
-					incq %rbx
+					incq %rbx	# if we increment it theres no way its zero, so skiiiiip
 					jmp skip_next_code_block
 
 				eat_skip:
